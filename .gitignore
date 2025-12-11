@@ -67,9 +67,6 @@ api-keys.json
 *.swo
 *~
 
-# Claude Code
-.claude/
-
 # Build artifacts
 dist/
 out/
