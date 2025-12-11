@@ -56,9 +56,11 @@ yarn-error.log
 # Environment and secrets
 .env
 .env.*
+!.env.example
 *.local
 secrets.json
 api-keys.json
+Secrets.swift
 
 # IDE
 .idea/
