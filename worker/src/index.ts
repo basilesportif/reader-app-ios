@@ -6,9 +6,9 @@ export interface Env {
 
 type Provider = 'claude' | 'openai' | 'gemini';
 
-type ClaudeModel = 'claude-sonnet-4-5-20250929' | 'claude-opus-4-5-20251124' | 'claude-haiku-3-5-20241022';
-type OpenAIModel = 'gpt-4.1' | 'gpt-4.1-mini' | 'o4-mini';
-type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash' | 'gemini-3-pro-preview';
+type ClaudeModel = 'claude-sonnet-4-5-20250929' | 'claude-opus-4-5-20251101';
+type OpenAIModel = 'gpt-5-mini' | 'gpt-5.1';
+type GeminiModel = 'gemini-2.5-flash' | 'gemini-3-pro-preview';
 type Model = ClaudeModel | OpenAIModel | GeminiModel;
 
 interface QueryRequest {
@@ -163,7 +163,7 @@ async function queryClaude(image: string, prompt: string, apiKey: string, reques
 }
 
 async function queryOpenAI(image: string, prompt: string, apiKey: string, requestedModel?: OpenAIModel): Promise<QueryResponse> {
-  const model = requestedModel || 'gpt-4.1';
+  const model = requestedModel || 'gpt-5.1';
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -173,7 +173,7 @@ async function queryOpenAI(image: string, prompt: string, apiKey: string, reques
     },
     body: JSON.stringify({
       model,
-      max_tokens: 4096,
+      max_completion_tokens: 4096,
       messages: [
         {
           role: 'user',
@@ -208,7 +208,7 @@ async function queryOpenAI(image: string, prompt: string, apiKey: string, reques
 }
 
 async function queryGemini(image: string, prompt: string, apiKey: string, requestedModel?: GeminiModel): Promise<QueryResponse> {
-  const model = requestedModel || 'gemini-2.5-flash';
+  const model = requestedModel || 'gemini-3-pro-preview';
   const mediaType = detectMediaType(image);
 
   const response = await fetch(

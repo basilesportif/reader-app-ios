@@ -1,8 +1,8 @@
 export type Provider = 'claude' | 'openai' | 'gemini';
 
-export type ClaudeModel = 'claude-sonnet-4-5-20250929' | 'claude-opus-4-5-20251124' | 'claude-haiku-3-5-20241022';
-export type OpenAIModel = 'gpt-4.1' | 'gpt-4.1-mini' | 'o4-mini';
-export type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash' | 'gemini-3-pro-preview';
+export type ClaudeModel = 'claude-sonnet-4-5-20250929' | 'claude-opus-4-5-20251101';
+export type OpenAIModel = 'gpt-5-mini' | 'gpt-5.1';
+export type GeminiModel = 'gemini-2.5-flash' | 'gemini-3-pro-preview';
 export type Model = ClaudeModel | OpenAIModel | GeminiModel;
 
 export interface ModelOption {
@@ -13,26 +13,22 @@ export interface ModelOption {
 export const modelsByProvider: Record<Provider, ModelOption[]> = {
   claude: [
     { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
-    { value: 'claude-opus-4-5-20251124', label: 'Claude Opus 4.5' },
-    { value: 'claude-haiku-3-5-20241022', label: 'Claude Haiku 3.5' },
+    { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' },
   ],
   openai: [
-    { value: 'gpt-4.1', label: 'GPT-4.1' },
-    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
-    { value: 'o4-mini', label: 'o4-mini' },
+    { value: 'gpt-5.1', label: 'GPT-5.1' },
+    { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
   ],
   gemini: [
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
     { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   ],
 };
 
 export const defaultModels: Record<Provider, Model> = {
   claude: 'claude-sonnet-4-5-20250929',
-  openai: 'gpt-4.1',
-  gemini: 'gemini-2.5-flash',
+  openai: 'gpt-5.1',
+  gemini: 'gemini-3-pro-preview',
 };
 
 export interface QueryResponse {
