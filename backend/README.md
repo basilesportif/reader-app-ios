@@ -1,10 +1,34 @@
-# Backend (Future)
+# Reader App Backend
 
-Placeholder for a future Cloudflare Worker or similar backend service.
+This directory is reserved for future backend implementation.
 
-When implemented, this will:
-- Keep API keys off the device
-- Route requests to multiple providers
-- Enable complex processing (DSPy, chaining)
+## Purpose
 
-See [spec.md](../spec.md) for the expected API contract.
+When needed, a backend can:
+1. Keep API keys off the device
+2. Route requests to multiple providers
+3. Add caching, rate limiting, logging
+4. Enable complex processing (DSPy, chaining)
+
+## Expected API Contract
+
+```
+POST /query
+Content-Type: application/json
+
+{
+  "image": "<base64>",
+  "prompt": "string",
+  "provider": "claude" | "openai" | "gemini" (optional),
+  "model": "string" (optional)
+}
+
+Response:
+{
+  "response": "string",
+  "provider": "string",
+  "model": "string"
+}
+```
+
+See `spec.md` in the project root for full details.
