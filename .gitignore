@@ -73,3 +73,6 @@ Secrets.swift
 dist/
 out/
 *.log
+
+# Playwright
+.playwright-mcp/

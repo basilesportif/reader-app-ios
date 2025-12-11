@@ -6,9 +6,9 @@ export interface QueryResponse {
   model: string;
 }
 
-const API_BASE = import.meta.env.PROD 
+const API_BASE = import.meta.env.PROD
   ? '' // In production, worker is at same origin
-  : '/api'; // In dev, proxied via vite
+  : ''; // In dev, proxied via vite to localhost:8787
 
 export async function queryApi(
   image: string,

@@ -1,0 +1,133 @@
+.query-history {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.query-history-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  gap: 0.5rem;
+}
+
+.query-history-empty .hint {
+  font-size: 0.875rem;
+  color: #444;
+}
+
+.query-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #222;
+  margin-bottom: 0.5rem;
+}
+
+.query-history-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.clear-button {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.clear-button:hover {
+  background: #222;
+  color: #aaa;
+}
+
+.query-history-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-item:hover {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+.history-item-content {
+  flex: 1;
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.history-thumbnail {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.history-item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-prompt {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.875rem;
+  color: #e5e5e5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #666;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.history-provider {
+  color: #888;
+}
+
+.history-delete {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.history-delete:hover {
+  background: #333;
+  color: #dc2626;
+}
