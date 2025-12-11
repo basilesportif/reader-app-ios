@@ -6,10 +6,16 @@ export interface Env {
 
 type Provider = 'claude' | 'openai' | 'gemini';
 
+type ClaudeModel = 'claude-sonnet-4-20250514' | 'claude-opus-4-20250514' | 'claude-haiku-3-5-20241022';
+type OpenAIModel = 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo';
+type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
+type Model = ClaudeModel | OpenAIModel | GeminiModel;
+
 interface QueryRequest {
   image: string; // base64
   prompt: string;
   provider: Provider;
+  model?: Model;
 }
 
 interface QueryResponse {
@@ -36,7 +42,7 @@ export default {
     if (url.pathname === '/api/query' && request.method === 'POST') {
       try {
         const body: QueryRequest = await request.json();
-        const { image, prompt, provider } = body;
+        const { image, prompt, provider, model } = body;
 
         if (!image || !prompt || !provider) {
           return new Response(
@@ -45,7 +51,7 @@ export default {
           );
         }
 
-        const result = await queryProvider(provider, image, prompt, env);
+        const result = await queryProvider(provider, image, prompt, env, model);
         
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -73,22 +79,23 @@ async function queryProvider(
   provider: Provider,
   image: string,
   prompt: string,
-  env: Env
+  env: Env,
+  model?: Model
 ): Promise<QueryResponse> {
   switch (provider) {
     case 'claude':
-      return queryClaude(image, prompt, env.CLAUDE_API_KEY);
+      return queryClaude(image, prompt, env.CLAUDE_API_KEY, model as ClaudeModel);
     case 'openai':
-      return queryOpenAI(image, prompt, env.OPENAI_API_KEY);
+      return queryOpenAI(image, prompt, env.OPENAI_API_KEY, model as OpenAIModel);
     case 'gemini':
-      return queryGemini(image, prompt, env.GEMINI_API_KEY);
+      return queryGemini(image, prompt, env.GEMINI_API_KEY, model as GeminiModel);
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
 }
 
-async function queryClaude(image: string, prompt: string, apiKey: string): Promise<QueryResponse> {
-  const model = 'claude-sonnet-4-20250514';
+async function queryClaude(image: string, prompt: string, apiKey: string, requestedModel?: ClaudeModel): Promise<QueryResponse> {
+  const model = requestedModel || 'claude-sonnet-4-20250514';
   
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -135,8 +142,8 @@ async function queryClaude(image: string, prompt: string, apiKey: string): Promi
   };
 }
 
-async function queryOpenAI(image: string, prompt: string, apiKey: string): Promise<QueryResponse> {
-  const model = 'gpt-4o';
+async function queryOpenAI(image: string, prompt: string, apiKey: string, requestedModel?: OpenAIModel): Promise<QueryResponse> {
+  const model = requestedModel || 'gpt-4o';
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -180,8 +187,8 @@ async function queryOpenAI(image: string, prompt: string, apiKey: string): Promi
   };
 }
 
-async function queryGemini(image: string, prompt: string, apiKey: string): Promise<QueryResponse> {
-  const model = 'gemini-2.0-flash';
+async function queryGemini(image: string, prompt: string, apiKey: string, requestedModel?: GeminiModel): Promise<QueryResponse> {
+  const model = requestedModel || 'gemini-2.0-flash';
   
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,

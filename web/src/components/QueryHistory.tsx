@@ -40,7 +40,7 @@ export function QueryHistory({ history, onSelect, onDelete, onClear }: QueryHist
               <div className="history-item-text">
                 <p className="history-prompt">{item.prompt}</p>
                 <p className="history-meta">
-                  <span className="history-provider">{item.provider}</span>
+                  <span className="history-provider">{item.model || item.provider}</span>
                   <span className="history-time">{formatTime(item.timestamp)}</span>
                 </p>
               </div>

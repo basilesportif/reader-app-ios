@@ -6,6 +6,7 @@ export interface QueryHistoryItem {
   prompt: string
   response: string
   provider: string
+  model?: string
   imagePreview?: string // small base64 thumbnail
 }
 

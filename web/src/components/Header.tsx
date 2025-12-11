@@ -1,9 +1,11 @@
-import { Provider } from '../services/api'
+import { Provider, Model, modelsByProvider } from '../services/api'
 import './Header.css'
 
 interface HeaderProps {
   provider: Provider
+  model: Model
   onProviderChange: (provider: Provider) => void
+  onModelChange: (model: Model) => void
   onHistoryClick: () => void
   historyCount: number
 }
@@ -14,7 +16,16 @@ const providers: { value: Provider; label: string }[] = [
   { value: 'gemini', label: 'Gemini' },
 ]
 
-export function Header({ provider, onProviderChange, onHistoryClick, historyCount }: HeaderProps) {
+export function Header({
+  provider,
+  model,
+  onProviderChange,
+  onModelChange,
+  onHistoryClick,
+  historyCount,
+}: HeaderProps) {
+  const models = modelsByProvider[provider]
+
   return (
     <header className="header">
       <h1 className="header-title">Reader</h1>
@@ -34,6 +45,17 @@ export function Header({ provider, onProviderChange, onHistoryClick, historyCoun
           {providers.map((p) => (
             <option key={p.value} value={p.value}>
               {p.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="model-select"
+          value={model}
+          onChange={(e) => onModelChange(e.target.value as Model)}
+        >
+          {models.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
             </option>
           ))}
         </select>

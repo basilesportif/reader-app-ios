@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Provider } from '../services/api'
+import { Provider, Model, modelsByProvider } from '../services/api'
 import './QueryInterface.css'
 
 interface QueryInterfaceProps {
@@ -8,6 +8,7 @@ interface QueryInterfaceProps {
   onRetake: () => void
   isLoading: boolean
   provider: Provider
+  model: Model
 }
 
 export function QueryInterface({
@@ -16,6 +17,7 @@ export function QueryInterface({
   onRetake,
   isLoading,
   provider,
+  model,
 }: QueryInterfaceProps) {
   const [prompt, setPrompt] = useState('')
   const [rotation, setRotation] = useState(0)
@@ -33,11 +35,8 @@ export function QueryInterface({
 
   const imageSrc = 'data:image/jpeg;base64,' + imageData
 
-  const providerNames: Record<Provider, string> = {
-    claude: 'Claude',
-    openai: 'OpenAI',
-    gemini: 'Gemini',
-  }
+  // Get the human-readable model name
+  const modelLabel = modelsByProvider[provider].find(m => m.value === model)?.label || model
 
   return (
     <div className="query-interface">
@@ -86,7 +85,7 @@ export function QueryInterface({
             disabled={!prompt.trim() || isLoading}
           >
             {isLoading && <span className="spinner" />}
-            {isLoading ? `Querying ${providerNames[provider]}...` : 'Send'}
+            {isLoading ? `Querying ${modelLabel}...` : 'Send'}
           </button>
         </div>
       </form>

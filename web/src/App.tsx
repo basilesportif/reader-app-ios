@@ -4,7 +4,7 @@ import { QueryInterface } from './components/QueryInterface'
 import { ResponseView } from './components/ResponseView'
 import { QueryHistory } from './components/QueryHistory'
 import { Header } from './components/Header'
-import { queryApi, Provider } from './services/api'
+import { queryApi, Provider, Model, defaultModels } from './services/api'
 import { useQueryHistory, createThumbnail, QueryHistoryItem } from './hooks/useQueryHistory'
 import './App.css'
 
@@ -14,12 +14,19 @@ function App() {
   const [viewState, setViewState] = useState<ViewState>('capture')
   const [imageData, setImageData] = useState<string | null>(null)
   const [provider, setProvider] = useState<Provider>('claude')
+  const [model, setModel] = useState<Model>(defaultModels.claude)
   const [response, setResponse] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lastPrompt, setLastPrompt] = useState<string>('')
+  const [, setLastPrompt] = useState<string>('')
 
   const { history, addToHistory, removeFromHistory, clearHistory } = useQueryHistory()
+
+  const handleProviderChange = (newProvider: Provider) => {
+    setProvider(newProvider)
+    // Reset model to default for the new provider
+    setModel(defaultModels[newProvider])
+  }
 
   const handleImageCapture = (data: string) => {
     setImageData(data)
@@ -35,7 +42,7 @@ function App() {
     setLastPrompt(prompt)
 
     try {
-      const result = await queryApi(imageData, prompt, provider)
+      const result = await queryApi(imageData, prompt, provider, model)
       setResponse(result.response)
       setViewState('response')
 
@@ -45,6 +52,7 @@ function App() {
         prompt,
         response: result.response,
         provider: result.provider,
+        model: result.model,
         imagePreview: thumbnail,
       })
     } catch (err) {
@@ -76,7 +84,9 @@ function App() {
     <div className="app">
       <Header
         provider={provider}
-        onProviderChange={setProvider}
+        model={model}
+        onProviderChange={handleProviderChange}
+        onModelChange={setModel}
         onHistoryClick={() => setViewState('history')}
         historyCount={history.length}
       />
@@ -100,6 +110,7 @@ function App() {
             onRetake={handleRetake}
             isLoading={isLoading}
             provider={provider}
+            model={model}
           />
         )}
 

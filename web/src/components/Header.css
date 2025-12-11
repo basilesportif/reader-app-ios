@@ -57,7 +57,8 @@
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
 }
 
-.provider-select {
+.provider-select,
+.model-select {
   background: #1a1a1a;
   color: white;
   border: 1px solid #333;
@@ -74,13 +75,19 @@
   padding-right: 2.5rem;
 }
 
-.provider-select:hover {
+.provider-select:hover,
+.model-select:hover {
   background-color: #222;
   border-color: #444;
 }
 
-.provider-select:focus {
+.provider-select:focus,
+.model-select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.model-select {
+  min-width: 140px;
 }
