@@ -24,6 +24,15 @@ interface QueryResponse {
   model: string;
 }
 
+interface TranscribeRequest {
+  audio: string; // base64 encoded audio
+  format?: 'webm' | 'mp4' | 'wav' | 'm4a';
+}
+
+interface TranscribeResponse {
+  text: string;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -53,6 +62,32 @@ export default {
 
         const result = await queryProvider(provider, image, prompt, env, model);
         
+        return new Response(JSON.stringify(result), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return new Response(
+          JSON.stringify({ error: message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (url.pathname === '/api/transcribe' && request.method === 'POST') {
+      try {
+        const body: TranscribeRequest = await request.json();
+        const { audio, format = 'webm' } = body;
+
+        if (!audio) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required field: audio' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const result = await transcribeAudio(audio, format, env.OPENAI_API_KEY);
+
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -251,4 +286,48 @@ async function queryGemini(image: string, prompt: string, apiKey: string, reques
     provider: 'gemini',
     model,
   };
+}
+
+async function transcribeAudio(
+  base64Audio: string,
+  format: string,
+  apiKey: string
+): Promise<TranscribeResponse> {
+  // Convert base64 to binary
+  const binaryString = atob(base64Audio);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  // Map format to MIME type
+  const mimeTypes: Record<string, string> = {
+    webm: 'audio/webm',
+    mp4: 'audio/mp4',
+    m4a: 'audio/m4a',
+    wav: 'audio/wav',
+  };
+  const mimeType = mimeTypes[format] || 'audio/webm';
+
+  // Create form data with audio file
+  const formData = new FormData();
+  const blob = new Blob([bytes], { type: mimeType });
+  formData.append('file', blob, `audio.${format}`);
+  formData.append('model', 'whisper-1');
+
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json() as { error?: { message?: string } };
+    throw new Error(error.error?.message || `Whisper API error: ${response.status}`);
+  }
+
+  const data = await response.json() as { text: string };
+  return { text: data.text };
 }

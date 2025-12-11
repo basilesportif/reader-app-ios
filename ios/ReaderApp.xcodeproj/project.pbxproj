@@ -20,6 +20,7 @@
 		A1000011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000011 /* Assets.xcassets */; };
 		A1000012 /* HistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* HistoryManager.swift */; };
 		A1000013 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013 /* HistoryView.swift */; };
+		A1000014 /* VoiceInputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* VoiceInputManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +37,7 @@
 		A2000011 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A2000012 /* HistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryManager.swift; sourceTree = "<group>"; };
 		A2000013 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		A2000014 /* VoiceInputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceInputManager.swift; sourceTree = "<group>"; };
 		A3000001 /* ReaderApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReaderApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -69,6 +71,7 @@
 				A2000006 /* KeychainManager.swift */,
 				A2000012 /* HistoryManager.swift */,
 				A2000013 /* HistoryView.swift */,
+				A2000014 /* VoiceInputManager.swift */,
 				A5000004 /* Providers */,
 				A2000011 /* Assets.xcassets */,
 			);
@@ -175,6 +178,7 @@
 				A1000010 /* GeminiProvider.swift in Sources */,
 				A1000012 /* HistoryManager.swift in Sources */,
 				A1000013 /* HistoryView.swift in Sources */,
+				A1000014 /* VoiceInputManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -4,8 +4,9 @@ import { QueryInterface } from './components/QueryInterface'
 import { ResponseView } from './components/ResponseView'
 import { QueryHistory } from './components/QueryHistory'
 import { Header } from './components/Header'
-import { queryApi, Provider, Model, defaultModels } from './services/api'
+import { queryApi } from './services/api'
 import { useQueryHistory, createThumbnail, QueryHistoryItem } from './hooks/useQueryHistory'
+import { useModelDefaults } from './hooks/useModelDefaults'
 import './App.css'
 
 type ViewState = 'capture' | 'query' | 'response' | 'history'
@@ -13,20 +14,13 @@ type ViewState = 'capture' | 'query' | 'response' | 'history'
 function App() {
   const [viewState, setViewState] = useState<ViewState>('capture')
   const [imageData, setImageData] = useState<string | null>(null)
-  const [provider, setProvider] = useState<Provider>('claude')
-  const [model, setModel] = useState<Model>(defaultModels.claude)
+  const { provider, model, setProvider, setModel } = useModelDefaults()
   const [response, setResponse] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [, setLastPrompt] = useState<string>('')
 
   const { history, addToHistory, removeFromHistory, clearHistory } = useQueryHistory()
-
-  const handleProviderChange = (newProvider: Provider) => {
-    setProvider(newProvider)
-    // Reset model to default for the new provider
-    setModel(defaultModels[newProvider])
-  }
 
   const handleImageCapture = (data: string) => {
     setImageData(data)
@@ -85,7 +79,7 @@ function App() {
       <Header
         provider={provider}
         model={model}
-        onProviderChange={handleProviderChange}
+        onProviderChange={setProvider}
         onModelChange={setModel}
         onHistoryClick={() => setViewState('history')}
         historyCount={history.length}

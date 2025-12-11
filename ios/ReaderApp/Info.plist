@@ -6,5 +6,7 @@
     <false/>
     <key>NSCameraUsageDescription</key>
     <string>Reader App needs camera access to capture book pages for AI analysis.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Reader App needs microphone access for voice input to transcribe your questions.</string>
 </dict>
 </plist>

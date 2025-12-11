@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Provider, Model, modelsByProvider } from '../services/api'
+import { useVoiceInput } from '../hooks/useVoiceInput'
 import './QueryInterface.css'
 
 interface QueryInterfaceProps {
@@ -21,6 +22,7 @@ export function QueryInterface({
 }: QueryInterfaceProps) {
   const [prompt, setPrompt] = useState('')
   const [rotation, setRotation] = useState(0)
+  const { state: voiceState, error: voiceError, startRecording, stopRecording } = useVoiceInput()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +33,17 @@ export function QueryInterface({
 
   const handleRotate = () => {
     setRotation((prev) => (prev + 90) % 360)
+  }
+
+  const handleVoiceClick = async () => {
+    if (voiceState === 'recording') {
+      const text = await stopRecording()
+      if (text) {
+        setPrompt((prev) => (prev ? `${prev} ${text}` : text))
+      }
+    } else if (voiceState === 'idle') {
+      startRecording()
+    }
   }
 
   const imageSrc = 'data:image/jpeg;base64,' + imageData
@@ -61,14 +74,38 @@ export function QueryInterface({
       </div>
 
       <form onSubmit={handleSubmit} className="query-form">
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Enter your question about this image..."
-          className="query-input"
-          rows={3}
-          disabled={isLoading}
-        />
+        <div className="prompt-input-container">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Enter your question about this image..."
+            className="query-input"
+            rows={3}
+            disabled={isLoading || voiceState !== 'idle'}
+          />
+          <button
+            type="button"
+            className={`voice-button ${voiceState === 'recording' ? 'recording' : ''}`}
+            onClick={handleVoiceClick}
+            disabled={isLoading || voiceState === 'transcribing'}
+            title={voiceState === 'recording' ? 'Stop recording' : 'Start voice input'}
+          >
+            {voiceState === 'transcribing' ? (
+              <span className="voice-spinner" />
+            ) : voiceState === 'recording' ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {voiceError && <div className="voice-error">{voiceError}</div>}
 
         <div className="query-actions">
           <button
