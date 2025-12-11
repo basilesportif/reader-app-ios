@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var showHistory = false
     @State private var errorMessage: String?
     @State private var lastQueryImageData: Data?
+    @State private var queryTask: Task<Void, Never>?
 
     enum ViewState {
         case camera
@@ -163,27 +164,33 @@ struct ContentView: View {
                 .lineLimit(3...6)
                 .padding()
             
-            HStack(spacing: 20) {
-                Button("Retake") {
-                    cameraManager.clearCapturedImage()
-                    prompt = ""
-                    viewState = .camera
-                }
-                .buttonStyle(.bordered)
-                
-                Button("Send") {
-                    sendQuery()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(prompt.isEmpty || isQuerying)
-            }
-            .padding()
-            
             if isQuerying {
                 ProgressView("Querying \(queryService.currentModel.displayName)...")
                     .foregroundColor(.white)
+                    .padding(.bottom, 8)
+
+                Button("Cancel") {
+                    cancelQuery()
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+            } else {
+                HStack(spacing: 20) {
+                    Button("Cancel") {
+                        cameraManager.clearCapturedImage()
+                        prompt = ""
+                        viewState = .camera
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Send") {
+                        sendQuery()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(prompt.isEmpty)
+                }
             }
-            
+
             Spacer()
         }
         .padding(.top)
@@ -224,9 +231,10 @@ struct ContentView: View {
         isQuerying = true
         lastQueryImageData = imageData
 
-        Task {
+        queryTask = Task {
             do {
                 let result = try await queryService.query(image: imageData, prompt: prompt)
+                guard !Task.isCancelled else { return }
                 response = result
                 viewState = .response
 
@@ -239,10 +247,22 @@ struct ContentView: View {
                     imageData: lastQueryImageData
                 )
             } catch {
-                errorMessage = error.localizedDescription
+                if !Task.isCancelled {
+                    errorMessage = error.localizedDescription
+                }
             }
             isQuerying = false
+            queryTask = nil
         }
+    }
+
+    private func cancelQuery() {
+        queryTask?.cancel()
+        queryTask = nil
+        isQuerying = false
+        cameraManager.clearCapturedImage()
+        prompt = ""
+        viewState = .camera
     }
 }
 
