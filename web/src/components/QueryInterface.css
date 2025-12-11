@@ -171,3 +171,67 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* Voice input styles */
+.prompt-input-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.prompt-input-container .query-input {
+  flex: 1;
+}
+
+.voice-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #222;
+  border: 1px solid #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.voice-button:hover:not(:disabled) {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+.voice-button.recording {
+  background: #dc2626;
+  border-color: #dc2626;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.voice-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.voice-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.voice-error {
+  color: #f87171;
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  background: rgba(220, 38, 38, 0.1);
+  border-radius: 6px;
+}

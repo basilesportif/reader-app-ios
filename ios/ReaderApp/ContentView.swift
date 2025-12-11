@@ -4,6 +4,7 @@ struct ContentView: View {
     @State private var cameraManager = CameraManager()
     @State private var queryService = QueryService()
     @State private var historyManager = HistoryManager()
+    @State private var voiceInputManager = VoiceInputManager()
     @State private var prompt = ""
     @State private var response = ""
     @State private var isQuerying = false
@@ -159,10 +160,50 @@ struct ContentView: View {
                     .frame(maxHeight: 400)
             }
             
-            TextField("Enter your question...", text: $prompt, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(3...6)
-                .padding()
+            HStack(alignment: .bottom, spacing: 12) {
+                TextField("Enter your question...", text: $prompt, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(3...6)
+                    .disabled(voiceInputManager.state != .idle)
+
+                Button {
+                    Task {
+                        if voiceInputManager.state == .recording {
+                            if let text = await voiceInputManager.stopRecording() {
+                                prompt = prompt.isEmpty ? text : "\(prompt) \(text)"
+                            }
+                        } else if voiceInputManager.state == .idle {
+                            await voiceInputManager.startRecording()
+                        }
+                    }
+                } label: {
+                    Group {
+                        switch voiceInputManager.state {
+                        case .idle:
+                            Image(systemName: "mic.fill")
+                                .foregroundColor(.white)
+                        case .recording:
+                            Image(systemName: "stop.fill")
+                                .foregroundColor(.red)
+                        case .transcribing:
+                            ProgressView()
+                                .tint(.white)
+                        }
+                    }
+                    .frame(width: 44, height: 44)
+                    .background(voiceInputManager.state == .recording ? Color.red.opacity(0.2) : Color.gray.opacity(0.2))
+                    .clipShape(Circle())
+                }
+                .disabled(isQuerying || voiceInputManager.state == .transcribing)
+            }
+            .padding()
+
+            if let voiceError = voiceInputManager.error {
+                Text(voiceError)
+                    .foregroundColor(.red)
+                    .font(.caption)
+                    .padding(.horizontal)
+            }
             
             if isQuerying {
                 ProgressView("Querying \(queryService.currentModel.displayName)...")
