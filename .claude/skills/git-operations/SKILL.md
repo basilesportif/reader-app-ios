@@ -47,3 +47,10 @@ git checkout main && git pull
 - Always sync local main after merging
 - Never force push
 - Always pull before creating new branches
+
+## Quick Commands
+
+When user says "merge this branch" or "merge the current branch":
+1. Create PR if one doesn't exist: `gh pr create --fill`
+2. Merge the PR: `gh pr merge --squash --delete-branch`
+3. Sync local main: `git checkout main && git pull`
