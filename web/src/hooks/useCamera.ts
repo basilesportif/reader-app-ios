@@ -1,48 +1,59 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 
+export type FacingMode = 'user' | 'environment'
+
 export function useCamera() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [facingMode, setFacingMode] = useState<FacingMode>('environment')
 
-  useEffect(() => {
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: false,
-        })
-        
-        streamRef.current = stream
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          videoRef.current.onloadedmetadata = () => {
-            setIsReady(true)
-          }
+  const startCamera = useCallback(async (mode: FacingMode) => {
+    // Stop existing stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+    }
+
+    setIsReady(false)
+    setError(null)
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: mode },
+        audio: false,
+      })
+
+      streamRef.current = stream
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.onloadedmetadata = () => {
+          setIsReady(true)
         }
-      } catch (err) {
-        if (err instanceof Error) {
-          if (err.name === 'NotAllowedError') {
-            setError('Camera access denied')
-          } else if (err.name === 'NotFoundError') {
-            setError('No camera found')
-          } else {
-            setError(err.message)
-          }
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          setError('Camera access denied')
+        } else if (err.name === 'NotFoundError') {
+          setError('No camera found')
+        } else {
+          setError(err.message)
         }
       }
     }
+  }, [])
 
-    startCamera()
+  useEffect(() => {
+    startCamera(facingMode)
 
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop())
       }
     }
-  }, [])
+  }, [facingMode, startCamera])
 
   const capturePhoto = useCallback(async (): Promise<string | null> => {
     const video = videoRef.current
@@ -62,5 +73,9 @@ export function useCamera() {
     return dataUrl.split(',')[1]
   }, [isReady])
 
-  return { videoRef, isReady, error, capturePhoto }
+  const toggleCamera = useCallback(() => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user')
+  }, [])
+
+  return { videoRef, isReady, error, capturePhoto, facingMode, toggleCamera }
 }

@@ -9,7 +9,7 @@ interface ImageCaptureProps {
 export function ImageCapture({ onCapture }: ImageCaptureProps) {
   const [mode, setMode] = useState<'camera' | 'upload'>('camera')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { videoRef, isReady, error, capturePhoto } = useCamera()
+  const { videoRef, isReady, error, capturePhoto, facingMode, toggleCamera } = useCamera()
 
   const handleCameraCapture = useCallback(async () => {
     const imageData = await capturePhoto()
@@ -67,13 +67,24 @@ export function ImageCapture({ onCapture }: ImageCaptureProps) {
             </div>
           ) : (
             <>
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="camera-preview"
-              />
+              <div className="camera-preview-container">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="camera-preview"
+                />
+                <button
+                  className="flip-camera-button"
+                  onClick={toggleCamera}
+                  title={facingMode === 'user' ? 'Switch to back camera' : 'Switch to front camera'}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 3h5v5M8 21H3v-5M21 3l-7 7M3 21l7-7M11 12a4 4 0 1 0 4 4" />
+                  </svg>
+                </button>
+              </div>
               <button
                 className="capture-button"
                 onClick={handleCameraCapture}
