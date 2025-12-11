@@ -3,18 +3,22 @@ import SwiftUI
 struct ContentView: View {
     @State private var cameraManager = CameraManager()
     @State private var queryService = QueryService()
+    @State private var historyManager = HistoryManager()
     @State private var prompt = ""
     @State private var response = ""
     @State private var isQuerying = false
     @State private var showSettings = false
+    @State private var showHistory = false
     @State private var errorMessage: String?
-    
+    @State private var lastQueryImageData: Data?
+    @State private var queryTask: Task<Void, Never>?
+
     enum ViewState {
         case camera
         case preview
         case response
     }
-    
+
     @State private var viewState: ViewState = .camera
     
     var body: some View {
@@ -35,24 +39,58 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSettings = true
-                    } label: {
-                        Image(systemName: "gear")
-                    }
-                }
-                
-                ToolbarItem(placement: .topBarLeading) {
-                    Picker("Provider", selection: $queryService.currentProvider) {
-                        ForEach(ProviderType.allCases) { provider in
-                            Text(provider.displayName).tag(provider)
+                    HStack(spacing: 12) {
+                        Button {
+                            showHistory = true
+                        } label: {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                if !historyManager.history.isEmpty {
+                                    Text("\(historyManager.history.count)")
+                                        .font(.caption2)
+                                        .padding(4)
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .clipShape(Circle())
+                                        .offset(x: 8, y: -8)
+                                }
+                            }
+                        }
+
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "gear")
                         }
                     }
-                    .pickerStyle(.menu)
+                }
+
+                ToolbarItem(placement: .topBarLeading) {
+                    HStack(spacing: 4) {
+                        Picker("Provider", selection: $queryService.currentProvider) {
+                            ForEach(ProviderType.allCases) { provider in
+                                Text(provider.displayName).tag(provider)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
+                        Picker("Model", selection: $queryService.currentModel) {
+                            ForEach(queryService.currentProvider.availableModels) { model in
+                                Text(model.displayName).tag(model)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
                 }
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+            }
+            .sheet(isPresented: $showHistory) {
+                HistoryView(historyManager: historyManager) { item in
+                    response = item.response
+                    viewState = .response
+                }
             }
             .alert("Error", isPresented: .init(
                 get: { errorMessage != nil },
@@ -126,27 +164,33 @@ struct ContentView: View {
                 .lineLimit(3...6)
                 .padding()
             
-            HStack(spacing: 20) {
-                Button("Retake") {
-                    cameraManager.clearCapturedImage()
-                    prompt = ""
-                    viewState = .camera
+            if isQuerying {
+                ProgressView("Querying \(queryService.currentModel.displayName)...")
+                    .foregroundColor(.white)
+                    .padding(.bottom, 8)
+
+                Button("Cancel") {
+                    cancelQuery()
                 }
                 .buttonStyle(.bordered)
-                
-                Button("Send") {
-                    sendQuery()
+                .tint(.red)
+            } else {
+                HStack(spacing: 20) {
+                    Button("Cancel") {
+                        cameraManager.clearCapturedImage()
+                        prompt = ""
+                        viewState = .camera
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Send") {
+                        sendQuery()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(prompt.isEmpty)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(prompt.isEmpty || isQuerying)
             }
-            .padding()
-            
-            if isQuerying {
-                ProgressView("Querying \(queryService.currentProvider.displayName)...")
-                    .foregroundColor(.white)
-            }
-            
+
             Spacer()
         }
         .padding(.top)
@@ -183,19 +227,42 @@ struct ContentView: View {
     
     private func sendQuery() {
         guard let imageData = cameraManager.capturedImage else { return }
-        
+
         isQuerying = true
-        
-        Task {
+        lastQueryImageData = imageData
+
+        queryTask = Task {
             do {
                 let result = try await queryService.query(image: imageData, prompt: prompt)
+                guard !Task.isCancelled else { return }
                 response = result
                 viewState = .response
+
+                // Save to history
+                historyManager.addToHistory(
+                    prompt: prompt,
+                    response: result,
+                    provider: queryService.currentProvider.displayName,
+                    model: queryService.currentModel.displayName,
+                    imageData: lastQueryImageData
+                )
             } catch {
-                errorMessage = error.localizedDescription
+                if !Task.isCancelled {
+                    errorMessage = error.localizedDescription
+                }
             }
             isQuerying = false
+            queryTask = nil
         }
+    }
+
+    private func cancelQuery() {
+        queryTask?.cancel()
+        queryTask = nil
+        isQuerying = false
+        cameraManager.clearCapturedImage()
+        prompt = ""
+        viewState = .camera
     }
 }
 

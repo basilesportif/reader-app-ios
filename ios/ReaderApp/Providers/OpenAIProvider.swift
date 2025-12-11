@@ -3,17 +3,16 @@ import Foundation
 struct OpenAIProvider: VisionProvider {
     static let providerType: ProviderType = .openai
     static let displayName = "OpenAI"
-    
+
     private static let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
-    private static let model = "gpt-4o"
-    
-    static func query(image: Data, prompt: String, apiKey: String) async throws -> String {
+
+    static func query(image: Data, prompt: String, apiKey: String, model: ModelType) async throws -> String {
         let base64Image = image.base64EncodedString()
         let dataURL = "data:image/jpeg;base64,\(base64Image)"
-        
+
         let requestBody: [String: Any] = [
-            "model": model,
-            "max_tokens": 4096,
+            "model": model.rawValue,
+            "max_completion_tokens": 4096,
             "messages": [
                 [
                     "role": "user",
