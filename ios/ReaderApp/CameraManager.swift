@@ -75,12 +75,17 @@ class CameraManager: NSObject {
     }
     
     func capturePhoto() async -> Data? {
+        // Check if there's an active video connection (won't exist on simulator)
+        guard photoOutput.connection(with: .video) != nil else {
+            return nil
+        }
+
         return await withCheckedContinuation { continuation in
             self.photoContinuation = continuation
-            
+
             let settings = AVCapturePhotoSettings()
             settings.flashMode = .auto
-            
+
             photoOutput.capturePhoto(with: settings, delegate: self)
         }
     }

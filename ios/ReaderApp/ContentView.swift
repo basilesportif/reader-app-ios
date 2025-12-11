@@ -5,33 +5,43 @@ struct ContentView: View {
     @State private var queryService = QueryService()
     @State private var historyManager = HistoryManager()
     @State private var voiceInputManager = VoiceInputManager()
-    @State private var prompt = ""
     @State private var response = ""
-    @State private var isQuerying = false
     @State private var showSettings = false
     @State private var showHistory = false
     @State private var errorMessage: String?
     @State private var lastQueryImageData: Data?
     @State private var queryTask: Task<Void, Never>?
+    @State private var recordingStartTime: Date?
+    @State private var recordingTimer: Timer?
+    @State private var recordingDuration: TimeInterval = 0
 
     enum ViewState {
-        case camera
-        case preview
-        case response
+        case camera           // Live camera feed, ready to capture
+        case recording        // Photo captured, voice recording in progress
+        case transcribing     // Processing audio
+        case retryAudio       // Transcription failed/empty, show photo + retry button
+        case querying         // Sending to AI
+        case response         // Showing AI response
     }
 
     @State private var viewState: ViewState = .camera
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-                
+
                 switch viewState {
                 case .camera:
                     cameraView
-                case .preview:
-                    previewView
+                case .recording:
+                    recordingView
+                case .transcribing:
+                    transcribingView
+                case .retryAudio:
+                    retryAudioView
+                case .querying:
+                    queryingView
                 case .response:
                     responseView
                 }
@@ -109,7 +119,8 @@ struct ContentView: View {
             cameraManager.stopSession()
         }
     }
-    
+
+    // MARK: - Camera View
     private var cameraView: some View {
         VStack {
             if cameraManager.isAuthorized {
@@ -117,22 +128,28 @@ struct ContentView: View {
                     CameraPreview(cameraManager: cameraManager)
                         .frame(width: geometry.size.width, height: geometry.size.height)
                 }
-                
+
+                // Combined capture button
                 Button {
-                    Task {
-                        if let _ = await cameraManager.capturePhoto() {
-                            viewState = .preview
+                    startCombinedCapture()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 70, height: 70)
+
+                        // Mic + Camera icon overlay
+                        ZStack {
+                            Image(systemName: "mic.fill")
+                                .font(.system(size: 24, weight: .medium))
+                                .foregroundColor(.black)
+
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.black)
+                                .offset(x: 12, y: 10)
                         }
                     }
-                } label: {
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 70, height: 70)
-                        .overlay(
-                            Circle()
-                                .stroke(.gray, lineWidth: 3)
-                                .frame(width: 60, height: 60)
-                        )
                 }
                 .padding(.bottom, 30)
             } else {
@@ -149,94 +166,208 @@ struct ContentView: View {
             }
         }
     }
-    
-    private var previewView: some View {
-        VStack {
+
+    // MARK: - Recording View
+    private var recordingView: some View {
+        ZStack {
+            // Frozen captured photo as background
             if let imageData = cameraManager.capturedImage,
                let uiImage = UIImage(data: imageData) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
-                    .frame(maxHeight: 400)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            
-            HStack(alignment: .bottom, spacing: 12) {
-                TextField("Enter your question...", text: $prompt, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(3...6)
-                    .disabled(voiceInputManager.state != .idle)
 
-                Button {
-                    Task {
-                        if voiceInputManager.state == .recording {
-                            if let text = await voiceInputManager.stopRecording() {
-                                prompt = prompt.isEmpty ? text : "\(prompt) \(text)"
-                            }
-                        } else if voiceInputManager.state == .idle {
-                            await voiceInputManager.startRecording()
-                        }
+            // Dark overlay
+            Color.black.opacity(0.3)
+
+            VStack {
+                Spacer()
+
+                // Recording indicator
+                VStack(spacing: 16) {
+                    // Pulsing red dot
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(.red)
+                            .frame(width: 12, height: 12)
+                            .modifier(PulsingAnimation())
+
+                        Text("Recording...")
+                            .font(.headline)
+                            .foregroundColor(.white)
                     }
-                } label: {
-                    Group {
-                        switch voiceInputManager.state {
-                        case .idle:
-                            Image(systemName: "mic.fill")
-                                .foregroundColor(.white)
-                        case .recording:
-                            Image(systemName: "stop.fill")
-                                .foregroundColor(.red)
-                        case .transcribing:
-                            ProgressView()
-                                .tint(.white)
-                        }
-                    }
-                    .frame(width: 44, height: 44)
-                    .background(voiceInputManager.state == .recording ? Color.red.opacity(0.2) : Color.gray.opacity(0.2))
-                    .clipShape(Circle())
+
+                    // Duration timer
+                    Text(formatDuration(recordingDuration))
+                        .font(.system(size: 48, weight: .light, design: .monospaced))
+                        .foregroundColor(.white)
+
+                    Text("Tap to finish and send")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
                 }
-                .disabled(isQuerying || voiceInputManager.state == .transcribing)
-            }
-            .padding()
+                .padding(24)
+                .background(.ultraThinMaterial.opacity(0.8))
+                .cornerRadius(16)
 
-            if let voiceError = voiceInputManager.error {
-                Text(voiceError)
-                    .foregroundColor(.red)
-                    .font(.caption)
-                    .padding(.horizontal)
+                Spacer()
+
+                // Stop/Send button
+                Button {
+                    stopAndProcess()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(.red)
+                            .frame(width: 70, height: 70)
+
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.bottom, 20)
+
+                // Cancel button
+                Button("Cancel") {
+                    cancelRecording()
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding(.bottom, 30)
             }
-            
-            if isQuerying {
-                ProgressView("Querying \(queryService.currentModel.displayName)...")
+        }
+    }
+
+    // MARK: - Transcribing View
+    private var transcribingView: some View {
+        ZStack {
+            // Frozen captured photo as background
+            if let imageData = cameraManager.capturedImage,
+               let uiImage = UIImage(data: imageData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            // Dark overlay
+            Color.black.opacity(0.5)
+
+            VStack(spacing: 16) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(.white)
+
+                Text("Transcribing audio...")
+                    .font(.headline)
                     .foregroundColor(.white)
-                    .padding(.bottom, 8)
+            }
+            .padding(32)
+            .background(.ultraThinMaterial.opacity(0.8))
+            .cornerRadius(16)
+        }
+    }
+
+    // MARK: - Retry Audio View
+    private var retryAudioView: some View {
+        ZStack {
+            // Frozen captured photo as background
+            if let imageData = cameraManager.capturedImage,
+               let uiImage = UIImage(data: imageData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            // Dark overlay
+            Color.black.opacity(0.5)
+
+            VStack(spacing: 24) {
+                // Error message
+                VStack(spacing: 8) {
+                    Image(systemName: "waveform.slash")
+                        .font(.system(size: 40))
+                        .foregroundColor(.orange)
+
+                    Text("No speech detected")
+                        .font(.headline)
+                        .foregroundColor(.white)
+
+                    Text("Tap the microphone to try again")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+
+                // Retry microphone button
+                Button {
+                    retryRecording()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 70, height: 70)
+
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.black)
+                    }
+                }
+
+                // Cancel button
+                Button("Cancel") {
+                    resetToCamera()
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+            }
+            .padding(32)
+            .background(.ultraThinMaterial.opacity(0.8))
+            .cornerRadius(16)
+        }
+    }
+
+    // MARK: - Querying View
+    private var queryingView: some View {
+        ZStack {
+            // Frozen captured photo as background
+            if let imageData = cameraManager.capturedImage,
+               let uiImage = UIImage(data: imageData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            // Dark overlay
+            Color.black.opacity(0.5)
+
+            VStack(spacing: 16) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(.white)
+
+                Text("Querying \(queryService.currentModel.displayName)...")
+                    .font(.headline)
+                    .foregroundColor(.white)
 
                 Button("Cancel") {
                     cancelQuery()
                 }
-                .buttonStyle(.bordered)
-                .tint(.red)
-            } else {
-                HStack(spacing: 20) {
-                    Button("Cancel") {
-                        cameraManager.clearCapturedImage()
-                        prompt = ""
-                        viewState = .camera
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Send") {
-                        sendQuery()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(prompt.isEmpty)
-                }
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+                .padding(.top, 8)
             }
-
-            Spacer()
+            .padding(32)
+            .background(.ultraThinMaterial.opacity(0.8))
+            .cornerRadius(16)
         }
-        .padding(.top)
     }
-    
+
+    // MARK: - Response View
     private var responseView: some View {
         VStack {
             ScrollView {
@@ -245,16 +376,13 @@ struct ContentView: View {
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            
+
             HStack(spacing: 20) {
                 Button("New Capture") {
-                    cameraManager.clearCapturedImage()
-                    prompt = ""
-                    response = ""
-                    viewState = .camera
+                    resetToCamera()
                 }
                 .buttonStyle(.bordered)
-                
+
                 Button {
                     UIPasteboard.general.string = response
                 } label: {
@@ -265,45 +393,158 @@ struct ContentView: View {
             .padding()
         }
     }
-    
-    private func sendQuery() {
+
+    // MARK: - Actions
+
+    private func startCombinedCapture() {
+        Task {
+            // First capture the photo
+            if let _ = await cameraManager.capturePhoto() {
+                // Then start voice recording
+                await voiceInputManager.startRecording()
+
+                // Start the timer
+                recordingStartTime = Date()
+                recordingDuration = 0
+                recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+                    if let startTime = recordingStartTime {
+                        recordingDuration = Date().timeIntervalSince(startTime)
+                    }
+                }
+
+                viewState = .recording
+            }
+        }
+    }
+
+    private func stopAndProcess() {
+        // Stop the timer
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+        recordingStartTime = nil
+
+        viewState = .transcribing
+
+        Task {
+            let transcribedText = await voiceInputManager.stopRecording()
+
+            if let text = transcribedText, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                // Success - send the query
+                await sendQuery(prompt: text)
+            } else {
+                // No speech detected - show retry view
+                await MainActor.run {
+                    viewState = .retryAudio
+                }
+            }
+        }
+    }
+
+    private func cancelRecording() {
+        // Stop the timer
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+        recordingStartTime = nil
+
+        voiceInputManager.cancelRecording()
+        resetToCamera()
+    }
+
+    private func retryRecording() {
+        Task {
+            await voiceInputManager.startRecording()
+
+            // Start the timer
+            recordingStartTime = Date()
+            recordingDuration = 0
+            recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+                if let startTime = recordingStartTime {
+                    recordingDuration = Date().timeIntervalSince(startTime)
+                }
+            }
+
+            viewState = .recording
+        }
+    }
+
+    private func sendQuery(prompt: String) async {
         guard let imageData = cameraManager.capturedImage else { return }
 
-        isQuerying = true
-        lastQueryImageData = imageData
+        await MainActor.run {
+            viewState = .querying
+            lastQueryImageData = imageData
+        }
 
         queryTask = Task {
             do {
                 let result = try await queryService.query(image: imageData, prompt: prompt)
                 guard !Task.isCancelled else { return }
-                response = result
-                viewState = .response
 
-                // Save to history
-                historyManager.addToHistory(
-                    prompt: prompt,
-                    response: result,
-                    provider: queryService.currentProvider.displayName,
-                    model: queryService.currentModel.displayName,
-                    imageData: lastQueryImageData
-                )
+                await MainActor.run {
+                    response = result
+                    viewState = .response
+
+                    // Save to history
+                    historyManager.addToHistory(
+                        prompt: prompt,
+                        response: result,
+                        provider: queryService.currentProvider.displayName,
+                        model: queryService.currentModel.displayName,
+                        imageData: lastQueryImageData
+                    )
+                }
             } catch {
                 if !Task.isCancelled {
-                    errorMessage = error.localizedDescription
+                    await MainActor.run {
+                        errorMessage = error.localizedDescription
+                        resetToCamera()
+                    }
                 }
             }
-            isQuerying = false
-            queryTask = nil
+
+            await MainActor.run {
+                queryTask = nil
+            }
         }
     }
 
     private func cancelQuery() {
         queryTask?.cancel()
         queryTask = nil
-        isQuerying = false
+        resetToCamera()
+    }
+
+    private func resetToCamera() {
         cameraManager.clearCapturedImage()
-        prompt = ""
+        response = ""
+        recordingDuration = 0
         viewState = .camera
+    }
+
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        let tenths = Int((duration.truncatingRemainder(dividingBy: 1)) * 10)
+        return String(format: "%d:%02d.%d", minutes, seconds, tenths)
+    }
+}
+
+// MARK: - Pulsing Animation Modifier
+struct PulsingAnimation: ViewModifier {
+    @State private var isPulsing = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(isPulsing ? 1.2 : 1.0)
+            .opacity(isPulsing ? 0.7 : 1.0)
+            .animation(
+                Animation.easeInOut(duration: 0.8)
+                    .repeatForever(autoreverses: true),
+                value: isPulsing
+            )
+            .onAppear {
+                isPulsing = true
+            }
     }
 }
 
