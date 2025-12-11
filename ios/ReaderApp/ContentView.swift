@@ -122,36 +122,31 @@ struct ContentView: View {
 
     // MARK: - Camera View
     private var cameraView: some View {
-        VStack {
+        ZStack {
             if cameraManager.isAuthorized {
-                GeometryReader { geometry in
-                    CameraPreview(cameraManager: cameraManager)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                }
+                CameraPreview(cameraManager: cameraManager)
+                    .ignoresSafeArea()
 
-                // Combined capture button
-                Button {
-                    startCombinedCapture()
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(.white)
-                            .frame(width: 70, height: 70)
-
-                        // Mic + Camera icon overlay
-                        ZStack {
+                // Floating action button in bottom-right corner
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button {
+                            startCombinedCapture()
+                        } label: {
                             Image(systemName: "mic.fill")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundColor(.black)
-
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.black)
-                                .offset(x: 12, y: 10)
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 60, height: 60)
+                                .background(Color.blue)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                         }
+                        .padding(.trailing, 24)
+                        .padding(.bottom, 40)
                     }
                 }
-                .padding(.bottom, 30)
             } else {
                 VStack(spacing: 20) {
                     Image(systemName: "camera.fill")
