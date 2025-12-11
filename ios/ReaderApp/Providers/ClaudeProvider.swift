@@ -3,15 +3,14 @@ import Foundation
 struct ClaudeProvider: VisionProvider {
     static let providerType: ProviderType = .claude
     static let displayName = "Claude"
-    
+
     private static let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
-    private static let model = "claude-sonnet-4-20250514"
-    
-    static func query(image: Data, prompt: String, apiKey: String) async throws -> String {
+
+    static func query(image: Data, prompt: String, apiKey: String, model: ModelType) async throws -> String {
         let base64Image = image.base64EncodedString()
-        
+
         let requestBody: [String: Any] = [
-            "model": model,
+            "model": model.rawValue,
             "max_tokens": 4096,
             "messages": [
                 [

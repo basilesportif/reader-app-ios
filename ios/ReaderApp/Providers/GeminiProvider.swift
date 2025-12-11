@@ -3,14 +3,12 @@ import Foundation
 struct GeminiProvider: VisionProvider {
     static let providerType: ProviderType = .gemini
     static let displayName = "Gemini"
-    
-    private static let model = "gemini-2.0-flash"
-    
-    private static func endpoint(apiKey: String) -> URL {
-        URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)")!
+
+    private static func endpoint(apiKey: String, model: ModelType) -> URL {
+        URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model.rawValue):generateContent?key=\(apiKey)")!
     }
-    
-    static func query(image: Data, prompt: String, apiKey: String) async throws -> String {
+
+    static func query(image: Data, prompt: String, apiKey: String, model: ModelType) async throws -> String {
         let base64Image = image.base64EncodedString()
         
         let requestBody: [String: Any] = [
@@ -31,7 +29,7 @@ struct GeminiProvider: VisionProvider {
             ]
         ]
         
-        var request = URLRequest(url: endpoint(apiKey: apiKey))
+        var request = URLRequest(url: endpoint(apiKey: apiKey, model: model))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)

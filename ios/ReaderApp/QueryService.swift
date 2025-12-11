@@ -8,35 +8,59 @@ class QueryService {
     var currentProvider: ProviderType {
         didSet {
             UserDefaults.standard.set(currentProvider.rawValue, forKey: "selectedProvider")
+            // Reset model to default for the new provider
+            currentModel = currentProvider.defaultModel
         }
     }
-    
+
+    var currentModel: ModelType {
+        didSet {
+            UserDefaults.standard.set(currentModel.rawValue, forKey: "selectedModel")
+        }
+    }
+
     var isLoading = false
     var lastError: String?
-    
+
     init() {
-        if let saved = UserDefaults.standard.string(forKey: "selectedProvider"),
-           let provider = ProviderType(rawValue: saved) {
-            self.currentProvider = provider
+        // Load provider
+        let provider: ProviderType
+        if let savedProvider = UserDefaults.standard.string(forKey: "selectedProvider"),
+           let saved = ProviderType(rawValue: savedProvider) {
+            provider = saved
         } else {
-            self.currentProvider = .claude
+            provider = .claude
         }
+
+        // Load model (must be valid for the current provider)
+        let model: ModelType
+        if let savedModel = UserDefaults.standard.string(forKey: "selectedModel"),
+           let saved = ModelType(rawValue: savedModel),
+           saved.provider == provider {
+            model = saved
+        } else {
+            model = provider.defaultModel
+        }
+
+        // Initialize both at once to satisfy @Observable requirements
+        self.currentProvider = provider
+        self.currentModel = model
     }
-    
+
     func query(image: Data, prompt: String) async throws -> String {
         guard let apiKey = KeychainManager.getKey(for: currentProvider), !apiKey.isEmpty else {
             throw ProviderError.missingAPIKey
         }
-        
+
         let processedImage = processImage(image)
-        
+
         switch currentProvider {
         case .claude:
-            return try await ClaudeProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey)
+            return try await ClaudeProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey, model: currentModel)
         case .openai:
-            return try await OpenAIProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey)
+            return try await OpenAIProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey, model: currentModel)
         case .gemini:
-            return try await GeminiProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey)
+            return try await GeminiProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey, model: currentModel)
         }
     }
     
