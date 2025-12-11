@@ -6,9 +6,9 @@ export interface Env {
 
 type Provider = 'claude' | 'openai' | 'gemini';
 
-type ClaudeModel = 'claude-sonnet-4-20250514' | 'claude-opus-4-20250514' | 'claude-haiku-3-5-20241022';
-type OpenAIModel = 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo';
-type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
+type ClaudeModel = 'claude-sonnet-4-5-20250929' | 'claude-opus-4-5-20251124' | 'claude-haiku-3-5-20241022';
+type OpenAIModel = 'gpt-4.1' | 'gpt-4.1-mini' | 'o4-mini';
+type GeminiModel = 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-2.0-flash' | 'gemini-3-pro-preview';
 type Model = ClaudeModel | OpenAIModel | GeminiModel;
 
 interface QueryRequest {
@@ -75,6 +75,25 @@ export default {
   },
 };
 
+// Detect image media type from base64 data
+function detectMediaType(base64: string): string {
+  // Check for common image signatures in base64
+  if (base64.startsWith('/9j/') || base64.startsWith('/9J/')) {
+    return 'image/jpeg';
+  }
+  if (base64.startsWith('iVBORw0KGgo')) {
+    return 'image/png';
+  }
+  if (base64.startsWith('R0lGOD')) {
+    return 'image/gif';
+  }
+  if (base64.startsWith('UklGR')) {
+    return 'image/webp';
+  }
+  // Default to jpeg
+  return 'image/jpeg';
+}
+
 async function queryProvider(
   provider: Provider,
   image: string,
@@ -95,8 +114,9 @@ async function queryProvider(
 }
 
 async function queryClaude(image: string, prompt: string, apiKey: string, requestedModel?: ClaudeModel): Promise<QueryResponse> {
-  const model = requestedModel || 'claude-sonnet-4-20250514';
-  
+  const model = requestedModel || 'claude-sonnet-4-5-20250929';
+  const mediaType = detectMediaType(image);
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -115,7 +135,7 @@ async function queryClaude(image: string, prompt: string, apiKey: string, reques
               type: 'image',
               source: {
                 type: 'base64',
-                media_type: 'image/jpeg',
+                media_type: mediaType,
                 data: image,
               },
             },
@@ -143,7 +163,7 @@ async function queryClaude(image: string, prompt: string, apiKey: string, reques
 }
 
 async function queryOpenAI(image: string, prompt: string, apiKey: string, requestedModel?: OpenAIModel): Promise<QueryResponse> {
-  const model = requestedModel || 'gpt-4o';
+  const model = requestedModel || 'gpt-4.1';
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -188,8 +208,9 @@ async function queryOpenAI(image: string, prompt: string, apiKey: string, reques
 }
 
 async function queryGemini(image: string, prompt: string, apiKey: string, requestedModel?: GeminiModel): Promise<QueryResponse> {
-  const model = requestedModel || 'gemini-2.0-flash';
-  
+  const model = requestedModel || 'gemini-2.5-flash';
+  const mediaType = detectMediaType(image);
+
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
@@ -203,7 +224,7 @@ async function queryGemini(image: string, prompt: string, apiKey: string, reques
             parts: [
               {
                 inline_data: {
-                  mime_type: 'image/jpeg',
+                  mime_type: mediaType,
                   data: image,
                 },
               },
