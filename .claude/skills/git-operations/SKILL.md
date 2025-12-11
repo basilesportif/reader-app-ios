@@ -1,9 +1,9 @@
 ---
-name: git-operations
-description: Git workflow for feature branches and merging. Use when starting new features or completing work.
+name: git
+description: All git operations: commits, branches, push, pull, merge, PRs, and GitHub CLI.
 ---
 
-# Git Operations Skill
+# Git Skill
 
 ## Workflow
 
