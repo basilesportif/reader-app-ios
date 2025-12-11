@@ -13,31 +13,37 @@ description: Git workflow for feature branches and merging. Use when starting ne
 
 2. **Commits**: Make atomic commits with clear messages
 
-3. **Merging**: Always ask the user before merging branches
-   - Ask: "Ready to merge `<branch>` into `main`?"
-   - Wait for confirmation before proceeding
+3. **Merging**: Use `gh` CLI to create PR and merge, then sync local main
+   - `gh pr create --title "..." --body "..." --base main`
+   - `gh pr merge --squash --delete-branch`
+   - `git checkout main && git pull`
 
 ## Instructions
 
 When starting a new feature:
-```
+```bash
 git checkout main
 git pull
 git checkout -b feature/<name>
 ```
 
 When feature is complete:
-1. Commit all changes
-2. Ask user: "Ready to merge `feature/<name>` into `main`?"
-3. Only merge after user confirms:
-```
-git checkout main
-git merge feature/<name>
-git push
+```bash
+# 1. Commit and push
+git add -A && git commit -m "..."
+git push -u origin <branch>
+
+# 2. Create PR and merge via gh
+gh pr create --title "..." --body "..." --base main
+gh pr merge --squash --delete-branch
+
+# 3. Sync local main
+git checkout main && git pull
 ```
 
 ## Rules
 
-- Never merge without asking
+- Always merge via `gh pr` (not local git merge)
+- Always sync local main after merging
 - Never force push
 - Always pull before creating new branches
