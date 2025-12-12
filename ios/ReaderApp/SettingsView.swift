@@ -2,49 +2,36 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    
-    @State private var claudeKey = ""
-    @State private var openAIKey = ""
-    @State private var geminiKey = ""
-    
-    @State private var showClaudeKey = false
-    @State private var showOpenAIKey = false
-    @State private var showGeminiKey = false
-    
+    @Environment(QueryService.self) private var queryService
+
     var body: some View {
+        @Bindable var service = queryService
+
         NavigationStack {
             Form {
-                Section("Claude (Anthropic)") {
-                    apiKeyField(
-                        key: $claudeKey,
-                        showKey: $showClaudeKey,
-                        provider: .claude,
-                        placeholder: "sk-ant-..."
+                Section("Web Search") {
+                    Toggle("Enable web search", isOn: $service.searchEnabled)
+
+                    Stepper(
+                        "Results per query: \(service.searchResultsPerQuery)",
+                        value: $service.searchResultsPerQuery,
+                        in: 1...10
                     )
                 }
-                
-                Section("OpenAI") {
-                    apiKeyField(
-                        key: $openAIKey,
-                        showKey: $showOpenAIKey,
-                        provider: .openai,
-                        placeholder: "sk-..."
-                    )
-                }
-                
-                Section("Gemini (Google)") {
-                    apiKeyField(
-                        key: $geminiKey,
-                        showKey: $showGeminiKey,
-                        provider: .gemini,
-                        placeholder: "AIza..."
-                    )
-                }
-                
+
                 Section {
-                    Text("API keys are stored securely in the iOS Keychain.")
+                    Text("When enabled, the app will search the web for relevant information about your image before generating a response.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                }
+
+                Section("About") {
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -56,56 +43,11 @@ struct SettingsView: View {
                     }
                 }
             }
-            .onAppear {
-                loadKeys()
-            }
         }
-    }
-    
-    @ViewBuilder
-    private func apiKeyField(
-        key: Binding<String>,
-        showKey: Binding<Bool>,
-        provider: ProviderType,
-        placeholder: String
-    ) -> some View {
-        HStack {
-            Group {
-                if showKey.wrappedValue {
-                    TextField(placeholder, text: key)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                } else {
-                    SecureField(placeholder, text: key)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
-            }
-            .onChange(of: key.wrappedValue) { _, newValue in
-                if newValue.isEmpty {
-                    KeychainManager.deleteKey(for: provider)
-                } else {
-                    KeychainManager.setKey(newValue, for: provider)
-                }
-            }
-            
-            Button {
-                showKey.wrappedValue.toggle()
-            } label: {
-                Image(systemName: showKey.wrappedValue ? "eye.slash" : "eye")
-                    .foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-    
-    private func loadKeys() {
-        claudeKey = KeychainManager.getKey(for: .claude) ?? ""
-        openAIKey = KeychainManager.getKey(for: .openai) ?? ""
-        geminiKey = KeychainManager.getKey(for: .gemini) ?? ""
     }
 }
 
 #Preview {
     SettingsView()
+        .environment(QueryService())
 }

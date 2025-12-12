@@ -19,8 +19,24 @@ class QueryService {
         }
     }
 
+    var searchEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(searchEnabled, forKey: "searchEnabled")
+        }
+    }
+
+    var searchResultsPerQuery: Int {
+        didSet {
+            UserDefaults.standard.set(searchResultsPerQuery, forKey: "searchResultsPerQuery")
+        }
+    }
+
     var isLoading = false
     var lastError: String?
+
+    // Metadata from last query
+    var lastSearchQueries: [String]?
+    var lastSearchPerformed: Bool = false
 
     init() {
         // Load provider
@@ -42,26 +58,46 @@ class QueryService {
             model = provider.defaultModel
         }
 
-        // Initialize both at once to satisfy @Observable requirements
+        // Load search settings
+        let searchEnabledValue: Bool
+        if UserDefaults.standard.object(forKey: "searchEnabled") != nil {
+            searchEnabledValue = UserDefaults.standard.bool(forKey: "searchEnabled")
+        } else {
+            searchEnabledValue = true // default: enabled
+        }
+
+        let searchResultsValue: Int
+        let storedResults = UserDefaults.standard.integer(forKey: "searchResultsPerQuery")
+        if storedResults > 0 {
+            searchResultsValue = min(10, max(1, storedResults))
+        } else {
+            searchResultsValue = 5 // default: 5
+        }
+
+        // Initialize all at once to satisfy @Observable requirements
         self.currentProvider = provider
         self.currentModel = model
+        self.searchEnabled = searchEnabledValue
+        self.searchResultsPerQuery = searchResultsValue
     }
 
     func query(image: Data, prompt: String) async throws -> String {
-        guard let apiKey = KeychainManager.getKey(for: currentProvider), !apiKey.isEmpty else {
-            throw ProviderError.missingAPIKey
-        }
-
         let processedImage = processImage(image)
 
-        switch currentProvider {
-        case .claude:
-            return try await ClaudeProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey, model: currentModel)
-        case .openai:
-            return try await OpenAIProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey, model: currentModel)
-        case .gemini:
-            return try await GeminiProvider.query(image: processedImage, prompt: prompt, apiKey: apiKey, model: currentModel)
-        }
+        let result = try await WorkerAPIClient.query(
+            image: processedImage,
+            prompt: prompt,
+            provider: currentProvider,
+            model: currentModel,
+            searchEnabled: searchEnabled,
+            searchResultsPerQuery: searchResultsPerQuery
+        )
+
+        // Store search metadata
+        lastSearchQueries = result.searchQueries
+        lastSearchPerformed = result.searchPerformed ?? false
+
+        return result.response
     }
     
     private func processImage(_ imageData: Data) -> Data {

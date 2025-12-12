@@ -68,15 +68,12 @@ enum ModelType: String, CaseIterable, Identifiable {
 }
 
 enum ProviderError: LocalizedError {
-    case missingAPIKey
     case invalidResponse
     case networkError(Error)
     case apiError(String)
-    
+
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey:
-            return "API key not configured"
         case .invalidResponse:
             return "Invalid response from API"
         case .networkError(let error):
@@ -85,10 +82,4 @@ enum ProviderError: LocalizedError {
             return "API error: \(message)"
         }
     }
-}
-
-protocol VisionProvider {
-    static var providerType: ProviderType { get }
-    static var displayName: String { get }
-    static func query(image: Data, prompt: String, apiKey: String, model: ModelType) async throws -> String
 }

@@ -35,6 +35,8 @@ export interface QueryResponse {
   response: string;
   provider: string;
   model: string;
+  searchQueries?: string[];
+  searchPerformed?: boolean;
 }
 
 const API_BASE = import.meta.env.PROD
@@ -45,7 +47,9 @@ export async function queryApi(
   image: string,
   prompt: string,
   provider: Provider,
-  model?: Model
+  model?: Model,
+  searchEnabled: boolean = true,
+  searchResultsPerQuery: number = 5
 ): Promise<QueryResponse> {
   const response = await fetch(`${API_BASE}/api/query`, {
     method: 'POST',
@@ -57,6 +61,8 @@ export async function queryApi(
       prompt,
       provider,
       model,
+      searchEnabled,
+      searchResultsPerQuery,
     }),
   });
 

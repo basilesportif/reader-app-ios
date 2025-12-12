@@ -2,6 +2,7 @@ export interface Env {
   CLAUDE_API_KEY: string;
   OPENAI_API_KEY: string;
   GEMINI_API_KEY: string;
+  BRAVE_SEARCH_API_KEY: string;
 }
 
 type Provider = 'claude' | 'openai' | 'gemini';
@@ -16,12 +17,23 @@ interface QueryRequest {
   prompt: string;
   provider: Provider;
   model?: Model;
+  searchEnabled?: boolean; // default: true
+  searchResultsPerQuery?: number; // default: 5, range: 1-10
 }
 
 interface QueryResponse {
   response: string;
   provider: string;
   model: string;
+  searchQueries?: string[]; // queries that were searched (for transparency)
+  searchPerformed?: boolean; // whether search was actually done
+}
+
+interface SearchResult {
+  query: string;
+  title: string;
+  snippet: string;
+  url: string;
 }
 
 interface TranscribeRequest {
@@ -52,6 +64,8 @@ export default {
       try {
         const body: QueryRequest = await request.json();
         const { image, prompt, provider, model } = body;
+        const searchEnabled = body.searchEnabled !== false; // default: true
+        const searchResultsPerQuery = Math.min(10, Math.max(1, body.searchResultsPerQuery ?? 5));
 
         if (!image || !prompt || !provider) {
           return new Response(
@@ -60,9 +74,40 @@ export default {
           );
         }
 
-        const result = await queryProvider(provider, image, prompt, env, model);
-        
-        return new Response(JSON.stringify(result), {
+        let enhancedPrompt = prompt;
+        let searchQueries: string[] = [];
+        let searchPerformed = false;
+
+        // Perform web search if enabled and API key is available
+        if (searchEnabled && env.BRAVE_SEARCH_API_KEY) {
+          try {
+            // Extract search queries using the same provider/model
+            searchQueries = await extractSearchQueries(image, prompt, provider, model, env);
+
+            if (searchQueries.length > 0) {
+              // Perform searches in parallel
+              const searchResults = await searchBrave(searchQueries, searchResultsPerQuery, env.BRAVE_SEARCH_API_KEY);
+
+              if (searchResults.length > 0) {
+                // Build enhanced prompt with search context
+                const searchContext = buildSearchContext(searchResults);
+                enhancedPrompt = `${prompt}\n\n${searchContext}`;
+                searchPerformed = true;
+              }
+            }
+          } catch (searchError) {
+            // Log but continue without search on error (graceful degradation)
+            console.error('Search failed, continuing without search:', searchError);
+          }
+        }
+
+        const result = await queryProvider(provider, image, enhancedPrompt, env, model);
+
+        return new Response(JSON.stringify({
+          ...result,
+          searchQueries: searchQueries.length > 0 ? searchQueries : undefined,
+          searchPerformed,
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } catch (error) {
@@ -330,4 +375,130 @@ async function transcribeAudio(
 
   const data = await response.json() as { text: string };
   return { text: data.text };
+}
+
+// Search Query Extraction - uses the same provider/model to generate search queries
+async function extractSearchQueries(
+  image: string,
+  prompt: string,
+  provider: Provider,
+  model: Model | undefined,
+  env: Env
+): Promise<string[]> {
+  const extractionPrompt = `Given this image and the user's question, generate 1-3 web search queries that would help provide a more informed answer. Return ONLY a JSON array of search query strings, nothing else.
+
+User's question: ${prompt}
+
+Example response format: ["search query 1", "search query 2"]`;
+
+  try {
+    const result = await queryProviderText(provider, image, extractionPrompt, env, model);
+
+    // Parse the JSON array from the response
+    const jsonMatch = result.match(/\[[\s\S]*?\]/);
+    if (jsonMatch) {
+      const queries = JSON.parse(jsonMatch[0]) as string[];
+      // Limit to 3 queries max
+      return queries.slice(0, 3).filter(q => typeof q === 'string' && q.trim().length > 0);
+    }
+  } catch (error) {
+    console.error('Failed to extract search queries:', error);
+  }
+
+  return [];
+}
+
+// Query provider and return just the text response (for extraction calls)
+async function queryProviderText(
+  provider: Provider,
+  image: string,
+  prompt: string,
+  env: Env,
+  model?: Model
+): Promise<string> {
+  const result = await queryProvider(provider, image, prompt, env, model);
+  return result.response;
+}
+
+// Brave Search API integration
+async function searchBrave(
+  queries: string[],
+  resultsPerQuery: number,
+  apiKey: string
+): Promise<SearchResult[]> {
+  const allResults: SearchResult[] = [];
+
+  // Run searches in parallel
+  const searchPromises = queries.map(async (query) => {
+    try {
+      const response = await fetch(
+        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${resultsPerQuery}`,
+        {
+          headers: {
+            'X-Subscription-Token': apiKey,
+            'Accept': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`Brave search failed for "${query}": ${response.status}`);
+        return [];
+      }
+
+      const data = await response.json() as {
+        web?: {
+          results?: Array<{
+            title: string;
+            url: string;
+            description: string;
+          }>;
+        };
+      };
+
+      return (data.web?.results || []).map((result) => ({
+        query,
+        title: result.title,
+        snippet: result.description,
+        url: result.url,
+      }));
+    } catch (error) {
+      console.error(`Brave search error for "${query}":`, error);
+      return [];
+    }
+  });
+
+  const resultsArrays = await Promise.all(searchPromises);
+  for (const results of resultsArrays) {
+    allResults.push(...results);
+  }
+
+  return allResults;
+}
+
+// Build search context to inject into the prompt
+function buildSearchContext(results: SearchResult[]): string {
+  if (results.length === 0) return '';
+
+  // Group results by query
+  const byQuery = new Map<string, SearchResult[]>();
+  for (const result of results) {
+    const existing = byQuery.get(result.query) || [];
+    existing.push(result);
+    byQuery.set(result.query, existing);
+  }
+
+  let context = '---\n**Web Search Context:**\n\n';
+
+  for (const [query, queryResults] of byQuery) {
+    context += `Search: "${query}"\n`;
+    for (const result of queryResults) {
+      context += `- ${result.title}: ${result.snippet} (${result.url})\n`;
+    }
+    context += '\n';
+  }
+
+  context += '---\nPlease answer the question using both the image and the search context above.';
+
+  return context;
 }

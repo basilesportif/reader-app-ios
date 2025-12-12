@@ -7,6 +7,7 @@ import { Header } from './components/Header'
 import { queryApi } from './services/api'
 import { useQueryHistory, createThumbnail, QueryHistoryItem } from './hooks/useQueryHistory'
 import { useModelDefaults } from './hooks/useModelDefaults'
+import { useSearchSettings } from './hooks/useSearchSettings'
 import './App.css'
 
 type ViewState = 'capture' | 'query' | 'response' | 'history'
@@ -15,6 +16,7 @@ function App() {
   const [viewState, setViewState] = useState<ViewState>('capture')
   const [imageData, setImageData] = useState<string | null>(null)
   const { provider, model, setProvider, setModel } = useModelDefaults()
+  const { searchEnabled, searchResultsPerQuery, setSearchEnabled, setSearchResultsPerQuery } = useSearchSettings()
   const [response, setResponse] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +38,7 @@ function App() {
     setLastPrompt(prompt)
 
     try {
-      const result = await queryApi(imageData, prompt, provider, model)
+      const result = await queryApi(imageData, prompt, provider, model, searchEnabled, searchResultsPerQuery)
       setResponse(result.response)
       setViewState('response')
 
@@ -83,6 +85,10 @@ function App() {
         onModelChange={setModel}
         onHistoryClick={() => setViewState('history')}
         historyCount={history.length}
+        searchEnabled={searchEnabled}
+        onSearchEnabledChange={setSearchEnabled}
+        searchResultsPerQuery={searchResultsPerQuery}
+        onSearchResultsPerQueryChange={setSearchResultsPerQuery}
       />
 
       <main className="main">

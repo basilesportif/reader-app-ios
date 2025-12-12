@@ -91,3 +91,66 @@
 .model-select {
   min-width: 140px;
 }
+
+.search-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.search-toggle:hover {
+  background: #222;
+  border-color: #444;
+}
+
+.search-toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
+.search-toggle-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #888;
+  transition: color 0.2s;
+}
+
+.search-toggle:hover .search-toggle-label {
+  color: #ccc;
+}
+
+.search-toggle input[type="checkbox"]:checked + .search-toggle-label {
+  color: #3b82f6;
+}
+
+.search-results-select {
+  background: #1a1a1a;
+  color: white;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 50px;
+}
+
+.search-results-select:hover {
+  background: #222;
+  border-color: #444;
+}
+
+.search-results-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}

@@ -8,6 +8,10 @@ interface HeaderProps {
   onModelChange: (model: Model) => void
   onHistoryClick: () => void
   historyCount: number
+  searchEnabled: boolean
+  onSearchEnabledChange: (enabled: boolean) => void
+  searchResultsPerQuery: number
+  onSearchResultsPerQueryChange: (count: number) => void
 }
 
 const providers: { value: Provider; label: string }[] = [
@@ -23,6 +27,10 @@ export function Header({
   onModelChange,
   onHistoryClick,
   historyCount,
+  searchEnabled,
+  onSearchEnabledChange,
+  searchResultsPerQuery,
+  onSearchResultsPerQueryChange,
 }: HeaderProps) {
   const models = modelsByProvider[provider]
 
@@ -30,6 +38,28 @@ export function Header({
     <header className="header">
       <h1 className="header-title">Reader</h1>
       <div className="header-actions">
+        <label className="search-toggle" title="Enable web search for image queries">
+          <input
+            type="checkbox"
+            checked={searchEnabled}
+            onChange={(e) => onSearchEnabledChange(e.target.checked)}
+          />
+          <span className="search-toggle-label">Search</span>
+        </label>
+        {searchEnabled && (
+          <select
+            className="search-results-select"
+            value={searchResultsPerQuery}
+            onChange={(e) => onSearchResultsPerQueryChange(parseInt(e.target.value, 10))}
+            title="Results per search query"
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        )}
         <button className="history-button" onClick={onHistoryClick}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
