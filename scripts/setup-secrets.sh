@@ -93,12 +93,8 @@ SWIFT
 
     echo "Generated $IOS_SECRETS_FILE"
     echo ""
-    echo "IMPORTANT: In Xcode, add SECRETS_AVAILABLE to Swift Compiler - Custom Flags:"
-    echo "  1. Select ReaderApp target"
-    echo "  2. Build Settings > Swift Compiler - Custom Flags > Active Compilation Conditions"
-    echo "  3. Add: SECRETS_AVAILABLE"
-    echo ""
-    echo "Also add Secrets.swift to your Xcode project if not already added."
+    echo "Note: SECRETS_AVAILABLE is already configured in the Xcode project."
+    echo "If Secrets.swift isn't in your Xcode project yet, add it manually."
 }
 
 case "${1:-}" in
