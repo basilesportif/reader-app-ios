@@ -43,6 +43,8 @@ const API_BASE = import.meta.env.PROD
   ? '' // In production, worker is at same origin
   : ''; // In dev, proxied via vite to localhost:8787
 
+const WORKER_API_KEY = import.meta.env.VITE_WORKER_API_KEY || '';
+
 export async function queryApi(
   image: string,
   prompt: string,
@@ -55,6 +57,7 @@ export async function queryApi(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${WORKER_API_KEY}`,
     },
     body: JSON.stringify({
       image,

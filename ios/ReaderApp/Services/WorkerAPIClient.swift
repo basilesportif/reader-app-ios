@@ -5,6 +5,14 @@ enum WorkerAPIClient {
     // For local development, change to http://localhost:8787
     private static let baseURL = URL(string: "https://reader-app-api.blah.workers.dev")!
 
+    // API key for worker authentication
+    // Set via: WorkerAPIClient.configure(apiKey: "your-key")
+    private static var apiKey: String = ""
+
+    static func configure(apiKey: String) {
+        self.apiKey = apiKey
+    }
+
     struct QueryRequest: Encodable {
         let image: String // base64
         let prompt: String
@@ -48,6 +56,7 @@ enum WorkerAPIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
         let body = QueryRequest(
             image: image.base64EncodedString(),
@@ -82,6 +91,7 @@ enum WorkerAPIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
         let body = TranscribeRequest(
             audio: audio.base64EncodedString(),

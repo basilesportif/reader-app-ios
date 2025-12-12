@@ -45,6 +45,14 @@ setup_worker() {
         echo "$GEMINI_API_KEY" | wrangler secret put GEMINI_API_KEY
     fi
 
+    if [ -n "$BRAVE_SEARCH_API_KEY" ]; then
+        echo "$BRAVE_SEARCH_API_KEY" | wrangler secret put BRAVE_SEARCH_API_KEY
+    fi
+
+    if [ -n "$WORKER_API_KEY" ]; then
+        echo "$WORKER_API_KEY" | wrangler secret put WORKER_API_KEY
+    fi
+
     echo "Worker secrets configured!"
 }
 
@@ -60,6 +68,8 @@ setup_worker_dev() {
 CLAUDE_API_KEY=$CLAUDE_API_KEY
 OPENAI_API_KEY=$OPENAI_API_KEY
 GEMINI_API_KEY=$GEMINI_API_KEY
+BRAVE_SEARCH_API_KEY=$BRAVE_SEARCH_API_KEY
+WORKER_API_KEY=$WORKER_API_KEY
 VARS
 
     echo "Generated $DEV_VARS_FILE"
@@ -77,9 +87,7 @@ setup_ios() {
 import Foundation
 
 enum Secrets {
-    static let claudeAPIKey = "$CLAUDE_API_KEY"
-    static let openAIAPIKey = "$OPENAI_API_KEY"
-    static let geminiAPIKey = "$GEMINI_API_KEY"
+    static let workerAPIKey = "$WORKER_API_KEY"
 }
 SWIFT
 

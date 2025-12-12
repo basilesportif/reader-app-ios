@@ -12,3 +12,4 @@ account_id = "be99f5cfb8adac2e0558d3683bc6876e"
 # - OPENAI_API_KEY
 # - GEMINI_API_KEY
 # - BRAVE_SEARCH_API_KEY (for web search feature)
+# - WORKER_API_KEY (authenticates clients - generate with: openssl rand -base64 32)

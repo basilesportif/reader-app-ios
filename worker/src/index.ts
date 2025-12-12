@@ -3,6 +3,7 @@ export interface Env {
   OPENAI_API_KEY: string;
   GEMINI_API_KEY: string;
   BRAVE_SEARCH_API_KEY: string;
+  WORKER_API_KEY: string; // Required for all requests
 }
 
 type Provider = 'claude' | 'openai' | 'gemini';
@@ -53,11 +54,22 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     };
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
+    }
+
+    // Authenticate all non-OPTIONS requests
+    const authHeader = request.headers.get('Authorization');
+    const apiKey = authHeader?.replace('Bearer ', '');
+
+    if (!apiKey || apiKey !== env.WORKER_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (url.pathname === '/api/query' && request.method === 'POST') {
