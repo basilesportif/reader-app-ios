@@ -1,6 +1,7 @@
 name = "reader-app-api"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
+account_id = "be99f5cfb8adac2e0558d3683bc6876e"
 
 [vars]
 # Non-secret config vars go here
