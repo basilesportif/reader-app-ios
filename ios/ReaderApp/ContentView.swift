@@ -364,28 +364,37 @@ struct ContentView: View {
 
     // MARK: - Response View
     private var responseView: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // Top bar with back button and copy
+            HStack {
+                Button {
+                    resetToCamera()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 17, weight: .semibold))
+                        Text("Back")
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    UIPasteboard.general.string = response
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 17))
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+
             ScrollView {
                 Text(response)
                     .foregroundColor(.white)
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            HStack(spacing: 20) {
-                Button("New Capture") {
-                    resetToCamera()
-                }
-                .buttonStyle(.bordered)
-
-                Button {
-                    UIPasteboard.general.string = response
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding()
         }
     }
 
